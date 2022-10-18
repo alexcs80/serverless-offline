@@ -37,28 +37,9 @@ function getMaxHttpMethodNameLength(routeInfo) {
   return max(...routeInfo.map(({ method }) => method.length))
 }
 
-export default function logRoutes(routeInfo) {
-  const boxenOptions = {
-    borderColor: 'yellow',
-    dimBorder: true,
-    margin: 1,
-    padding: 1,
-  }
+export function logRoutes(routeInfo) {
   const maxLength = getMaxHttpMethodNameLength(routeInfo)
-
-  // eslint-disable-next-line no-console
-  console.log(
-    boxen(
-      routeInfo
-        .map(
-          ({ invokePath, method, path, server }) =>
-            // eslint-disable-next-line prefer-template
-            logRoute(method, server, path, maxLength) +
-            '\n' +
-            logRoute('POST', server, invokePath, maxLength, true),
-        )
-        .join('\n'),
-      boxenOptions,
-    ),
-  )
+  routeInfo.forEach((route) => {
+    console.log(logRoute(route.method, route.server, route.path, maxLength))
+  })
 }

@@ -22,6 +22,7 @@ export default class ServerlessOffline {
   #serverless = null
 
   #webSocket = null
+  #alb = null
 
   commands = {
     offline: {
@@ -67,6 +68,7 @@ export default class ServerlessOffline {
       lambdas,
       scheduleEvents,
       webSocketEvents,
+      albEvents,
     } = this.#getEvents()
 
     if (lambdas.length > 0) {
@@ -75,7 +77,7 @@ export default class ServerlessOffline {
 
     const eventModules = []
 
-    if (httpApiEvents.length > 0 || httpEvents.length > 0) {
+    if ((httpApiEvents.length > 0 || httpEvents.length > 0) && !process.env.DISABLE_HTTP) {
       eventModules.push(this.#createHttp([...httpApiEvents, ...httpEvents]))
     }
 
@@ -85,6 +87,10 @@ export default class ServerlessOffline {
 
     if (webSocketEvents.length > 0) {
       eventModules.push(this.#createWebSocket(webSocketEvents))
+    }
+
+    if (albEvents.length > 0) {
+      eventModules.push(this.#createAlb(albEvents))
     }
 
     await Promise.all(eventModules)
@@ -114,6 +120,10 @@ export default class ServerlessOffline {
 
     if (this.#webSocket) {
       eventModules.push(this.#webSocket.stop(SERVER_SHUTDOWN_TIMEOUT))
+    }
+
+    if (this.#alb) {
+      eventModules.push(this.#alb.stop(SERVER_SHUTDOWN_TIMEOUT))
     }
 
     await Promise.all(eventModules)
@@ -187,6 +197,18 @@ export default class ServerlessOffline {
 
     if (!skipStart) {
       await this.#http.start()
+    }
+  }
+
+  async #createAlb(events, skipStart) {
+    const { default: Alb } = await import('./events/alb/index.js')
+
+    this.#alb = new Alb(this.#serverless, this.#options, this.#lambda)
+
+    this.#alb.create(events)
+
+    if (!skipStart) {
+      await this.#alb.start()
     }
   }
 
@@ -268,6 +290,7 @@ export default class ServerlessOffline {
     const lambdas = []
     const scheduleEvents = []
     const webSocketEvents = []
+    const albEvents = []
 
     const functionKeys = service.getAllFunctions()
 
@@ -279,7 +302,7 @@ export default class ServerlessOffline {
       const events = service.getAllEventsInFunction(functionKey) || []
 
       events.forEach((event) => {
-        const { http, httpApi, schedule, websocket } = event
+        const { http, httpApi, schedule, websocket, alb } = event
 
         if (http && functionDefinition.handler) {
           const httpEvent = {
@@ -365,6 +388,14 @@ export default class ServerlessOffline {
             websocket,
           })
         }
+
+        if (alb) {
+          albEvents.push({
+            functionKey,
+            handler: functionDefinition.handler,
+            alb,
+          })
+        }
       })
     })
 
@@ -374,6 +405,7 @@ export default class ServerlessOffline {
       lambdas,
       scheduleEvents,
       webSocketEvents,
+      albEvents,
     }
   }
 
