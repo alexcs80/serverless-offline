@@ -1,6 +1,6 @@
-import { Buffer } from 'buffer'
+import { Buffer } from 'node:buffer'
 import { Server } from '@hapi/hapi'
-import logRoutes from '../../utils/logRoutes.js'
+import { logRoutes } from '../../utils/logRoutes.js'
 import { log } from '@serverless/utils/log.js'
 import { generateHapiPath, detectEncoding } from '../../utils/index.js'
 import LambdaALBRequestEvent from './lambda-events/LambdaALBRequestEvent.js'
