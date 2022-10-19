@@ -1,9 +1,9 @@
 import { Buffer } from 'buffer'
 import { Server } from '@hapi/hapi'
-import serverlessLog, { logRoutes } from '../../serverlessLog.js'
+import logRoutes from '../../utils/logRoutes.js'
+import { log } from '@serverless/utils/log.js'
 import { generateHapiPath, detectEncoding } from '../../utils/index.js'
 import LambdaALBRequestEvent from './lambda-events/LambdaALBRequestEvent.js'
-import debugLog from '../../debugLog.js'
 
 export default class HttpServer {
   #lambda = null
@@ -43,9 +43,9 @@ export default class HttpServer {
     // TODO move the following block
     const server = `http://${host}:${httpPort}`
 
-    serverlessLog(`[HTTP] server ready: ${server} 🚀`)
-    serverlessLog('')
-    serverlessLog('Enter "rp" to replay the last request')
+    log.notice(`[HTTP] server ready: ${server} 🚀`)
+    log.notice('')
+    log.notice('Enter "rp" to replay the last request')
   }
 
   // stops the server
@@ -85,7 +85,7 @@ export default class HttpServer {
     // skip HEAD routes as hapi will fail with 'Method name not allowed: HEAD ...'
     // for more details, check https://github.com/dherault/serverless-offline/issues/204
     if (hapiMethod === 'HEAD') {
-      serverlessLog(
+      log.notice(
         'HEAD method event detected. Skipping HAPI server route mapping ...',
       )
 
@@ -118,11 +118,11 @@ export default class HttpServer {
 
       // Incomming request message
       this._printBlankLine()
-      serverlessLog(`${method} ${request.path} (λ: ${functionKey})`)
+      log.notice(`${method} ${request.path} (λ: ${functionKey})`)
 
       const event = new LambdaALBRequestEvent(request).create()
 
-      debugLog('event:', event)
+      log.debug('event:', event)
 
       const lambdaFunction = this.#lambda.get(functionKey)
 
@@ -174,7 +174,7 @@ export default class HttpServer {
           stackTrace: this._getArrayStackTrace(err.stack),
         }
 
-        serverlessLog(`Failure: ${errorMessage}`)
+        log.notice(`Failure: ${errorMessage}`)
 
         if (!this.#options.hideStackTraces) {
           console.error(err.stack)
